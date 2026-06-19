@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Salkku — agenttidashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#FAF8F3;
+    --ink:#1C1B19;
+    --muted:#6B6760;
+    --hairline:#D9D4C8;
+    --positive:#1F6F4A;
+    --negative:#B23A2F;
+    --navy:#1B2A4A;
+    --card:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace; font-variant-numeric:tabular-nums;}
+  header{
+    display:flex; justify-content:space-between; align-items:baseline;
+    padding:32px 40px 20px; border-bottom:1px solid var(--hairline);
+  }
+  h1{
+    font-family:'Fraunces',serif; font-weight:600; font-size:32px; margin:0;
+    letter-spacing:-0.01em;
+  }
+  header .sub{color:var(--muted); font-size:13px; margin-top:4px;}
+  .actions{display:flex; gap:10px;}
+  button{
+    font-family:'Inter',sans-serif; font-size:13px; font-weight:500;
+    border:1px solid var(--navy); background:var(--navy); color:#fff;
+    padding:9px 16px; border-radius:3px; cursor:pointer;
+  }
+  button.ghost{background:transparent; color:var(--navy);}
+  button:hover{opacity:0.85;}
+  button:focus-visible, a:focus-visible, input:focus-visible{outline:2px solid var(--navy); outline-offset:2px;}
+  main{padding:30px 40px 80px; max-width:1080px; margin:0 auto;}
+
+  table{width:100%; border-collapse:collapse; margin-top:10px;}
+  thead th{
+    text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color:var(--muted); font-weight:500; padding:8px 10px; border-bottom:1px solid var(--hairline);
+  }
+  tbody td{padding:14px 10px; border-bottom:1px solid var(--hairline); font-size:15px;}
+  tbody tr:hover{background:rgba(27,42,74,0.03);}
+  .ticker-btn{
+    font-family:'IBM Plex Mono',monospace; font-weight:500; font-size:15px;
+    background:none; border:none; color:var(--navy); padding:0; cursor:pointer;
+    text-decoration:underline; text-decoration-color:var(--hairline); text-underline-offset:3px;
+  }
+  .ticker-btn:hover{text-decoration-color:var(--navy);}
+  .num{text-align:right; font-family:'IBM Plex Mono',monospace;}
+  .pos{color:var(--positive);}
+  .neg{color:var(--negative);}
+
+  #detail{margin-top:46px; display:none;}
+  #detail.open{display:block;}
+  .detail-head{
+    display:flex; justify-content:space-between; align-items:baseline; margin-bottom:18px;
+  }
+  .detail-head h2{font-family:'Fraunces',serif; font-size:24px; margin:0; font-weight:600;}
+  .grid{display:grid; grid-template-columns:1fr 1fr; gap:18px;}
+  @media(max-width:680px){.grid{grid-template-columns:1fr;}}
+
+  .slip{
+    background:var(--card); border:1px dashed var(--hairline); border-radius:4px;
+    padding:18px 18px 16px; position:relative;
+  }
+  .slip .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.08em;
+    text-transform:uppercase; color:var(--navy); display:flex; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .slip .eyebrow .ts{color:var(--muted); font-weight:400;}
+  .slip p{font-size:14px; line-height:1.55; margin:0 0 6px;}
+  .slip .note{color:var(--muted); font-size:13px;}
+  .slip ul{margin:6px 0 0; padding-left:0; list-style:none;}
+  .slip li{font-size:13px; margin-bottom:5px; padding-left:12px; position:relative;}
+  .slip li::before{content:"—"; position:absolute; left:0; color:var(--hairline);}
+  .slip a{color:var(--navy);}
+  .slip .stat{display:flex; gap:18px; margin-bottom:10px; flex-wrap:wrap;}
+  .slip .stat div{font-size:12px; color:var(--muted);}
+  .slip .stat b{display:block; font-family:'IBM Plex Mono',monospace; font-size:15px; color:var(--ink); font-weight:500;}
+
+  .empty{color:var(--muted); font-size:13px; font-style:italic;}
+
+  /* Asetukset-modaali */
+  .overlay{
+    position:fixed; inset:0; background:rgba(28,27,25,0.4); display:none;
+    align-items:center; justify-content:center; z-index:10;
+  }
+  .overlay.open{display:flex;}
+  .modal{
+    background:var(--card); border-radius:6px; padding:28px 30px; width:380px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.18);
+  }
+  .modal h3{font-family:'Fraunces',serif; margin:0 0 4px; font-size:20px;}
+  .modal .hint{color:var(--muted); font-size:12.5px; line-height:1.5; margin:0 0 18px;}
+  .field{margin-bottom:14px;}
+  .field label{
+    display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:5px;
+  }
+  .field label .dot{font-family:'IBM Plex Mono',monospace;}
+  .dot.set{color:var(--positive);}
+  .dot.unset{color:var(--negative);}
+  .field input{
+    width:100%; padding:9px 10px; border:1px solid var(--hairline); border-radius:3px;
+    font-family:'IBM Plex Mono',monospace; font-size:13px;
+  }
+  .modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:18px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Salkku</h1>
+    <div class="sub">Agenttien tuoma tilannekuva — kaikki data pysyy paikallisella koneella</div>
+  </div>
+  <div class="actions">
+    <button class="ghost" id="openSettings">Asetukset</button>
+    <button id="refreshAll">Päivitä kaikki</button>
+  </div>
+</header>
+
+<main>
+  <table>
+    <thead>
+      <tr>
+        <th>Tikkeri</th>
+        <th class="num">Määrä</th>
+        <th class="num">Ostohinta</th>
+        <th class="num">Viim. kurssi</th>
+        <th class="num">Tulos</th>
+      </tr>
+    </thead>
+    <tbody id="portfolioBody">
+      <tr><td colspan="5" class="empty">Ladataan salkkua…</td></tr>
+    </tbody>
+  </table>
+
+  <section id="detail">
+    <div class="detail-head">
+      <h2 id="detailTicker"></h2>
+      <button class="ghost" id="refreshOne">Päivitä tämä</button>
+    </div>
+    <div class="grid">
+      <div class="slip" id="slip-ta">
+        <div class="eyebrow"><span>Tekninen analyysi</span><span class="ts" id="ts-ta"></span></div>
+        <div class="body" id="body-ta">—</div>
+      </div>
+      <div class="slip" id="slip-news">
+        <div class="eyebrow"><span>Uutiset</span><span class="ts" id="ts-news"></span></div>
+        <div class="body" id="body-news">—</div>
+      </div>
+      <div class="slip" id="slip-earnings">
+        <div class="eyebrow"><span>Tulosrapsa</span><span class="ts" id="ts-earnings"></span></div>
+        <div class="body" id="body-earnings">—</div>
+      </div>
+      <div class="slip" id="slip-dividend">
+        <div class="eyebrow"><span>Osinko</span><span class="ts" id="ts-dividend"></span></div>
+        <div class="body" id="body-dividend">—</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3>Asetukset</h3>
+    <p class="hint">Avaimet tallentuvat paikalliseen config.json-tiedostoon tällä koneella.
+       Ne eivät koskaan näy uudelleen tässä lomakkeessa — vain tila (asetettu / ei asetettu) näkyy.</p>
+
+    <div class="field">
+      <label>Anthropic API -avain <span class="dot" id="dot-anthropic">○</span></label>
+      <input type="password" id="key-anthropic" placeholder="sk-ant-…">
+    </div>
+    <div class="field">
+      <label>Finnhub API -avain <span class="dot" id="dot-finnhub">○</span></label>
+      <input type="password" id="key-finnhub" placeholder="finnhub-avain">
+    </div>
+
+    <div class="modal-actions">
+      <button class="ghost" id="closeSettings">Sulje</button>
+      <button id="saveSettings">Tallenna</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const fmt = (n, decimals=2) => (n === null || n === undefined || isNaN(n)) ? "–" : Number(n).toFixed(decimals);
+const currencyOf = (ticker) => ticker.endsWith(".HE") ? "€" : "$";
+
+async function loadPortfolio() {
+  const res = await fetch("/api/portfolio");
+  const { holdings } = await res.json();
+  const body = document.getElementById("portfolioBody");
+  if (!holdings.length) {
+    body.innerHTML = '<tr><td colspan="5" class="empty">Salkku on tyhjä — täytä portfolio_example.csv.</td></tr>';
+    return;
+  }
+  body.innerHTML = "";
+  for (const h of holdings) {
+    const tr = document.createElement("tr");
+    const cur = currencyOf(h.ticker);
+    let lastClose = null, gain = null, gainPct = null;
+    try {
+      const d = await fetch(`/api/data/${encodeURIComponent(h.ticker)}`).then(r => r.json());
+      lastClose = d?.ta?.indicators?.last_close ?? null;
+      if (lastClose !== null) {
+        const cost = parseFloat(h.ostohinta) * parseFloat(h.maara);
+        const value = lastClose * parseFloat(h.maara);
+        gain = value - cost;
+        gainPct = (gain / cost) * 100;
+      }
+    } catch (e) { /* ei dataa vielä */ }
+
+    const gainClass = gain === null ? "" : (gain >= 0 ? "pos" : "neg");
+    tr.innerHTML = `
+      <td><button class="ticker-btn" data-ticker="${h.ticker}">${h.ticker}</button></td>
+      <td class="num">${h.maara}</td>
+      <td class="num">${fmt(h.ostohinta)} ${cur}</td>
+      <td class="num">${fmt(lastClose)} ${cur}</td>
+      <td class="num ${gainClass}">${gain === null ? "–" : fmt(gain) + " " + cur + " (" + fmt(gainPct,1) + "%)"}</td>
+    `;
+    body.appendChild(tr);
+  }
+  document.querySelectorAll(".ticker-btn").forEach(btn =>
+    btn.addEventListener("click", () => openDetail(btn.dataset.ticker))
+  );
+}
+
+function renderSlip(prefix, payload, renderer) {
+  document.getElementById(`body-${prefix}`).innerHTML = renderer(payload);
+}
+
+function tsLabel(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return "Päivitetty " + d.toLocaleString("fi-FI", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit" });
+}
+
+function renderTA(d) {
+  if (d.error) return `<p class="note">${d.error}</p>`;
+  const i = d.indicators || {};
+  return `
+    <div class="stat">
+      <div>Kurssi<b>${fmt(i.last_close)}</b></div>
+      <div>RSI(14)<b>${fmt(i.rsi_14,1)}</b></div>
+      <div>MA50<b>${fmt(i.ma50)}</b></div>
+      <div>MA200<b>${fmt(i.ma200)}</b></div>
+    </div>
+    <p>${d.summary || ""}</p>`;
+}
+
+function renderNews(d) {
+  if (d.error) return `<p class="note">${d.error}</p>`;
+  const articles = (d.articles || []).slice(0,5)
+    .map(a => `<li><a href="${a.url}" target="_blank" rel="noopener">${a.title}</a></li>`).join("");
+  return `<p>${d.summary || ""}</p><ul>${articles}</ul>`;
+}
+
+function renderEarnings(d) {
+  if (d.error) return `<p class="note">${d.error}</p>`;
+  if (d.note) return `<p class="note">${d.note}</p>`;
+  return `<p>${d.summary || ""}</p>`;
+}
+
+function renderDividend(d) {
+  if (d.error) return `<p class="note">${d.error}</p>`;
+  if (d.note) return `<p class="note">${d.note}</p>`;
+  const yieldTxt = d.dividend_yield ? `<div class="stat"><div>Osinkotuotto<b>${fmt(d.dividend_yield*100,2)}%</b></div></div>` : "";
+  return `${yieldTxt}<p>${d.summary || ""}</p>`;
+}
+
+let currentTicker = null;
+
+async function openDetail(ticker) {
+  currentTicker = ticker;
+  document.getElementById("detail").classList.add("open");
+  document.getElementById("detailTicker").textContent = ticker;
+  document.getElementById("detail").scrollIntoView({ behavior:"smooth", block:"start" });
+  await refreshDetailView();
+}
+
+async function refreshDetailView() {
+  if (!currentTicker) return;
+  const data = await fetch(`/api/data/${encodeURIComponent(currentTicker)}`).then(r => r.json());
+  if (data.error) {
+    ["ta","news","earnings","dividend"].forEach(p => renderSlip(p, {}, () => `<p class="note">${data.error}</p>`));
+    return;
+  }
+  const ts = tsLabel(data.updated_at);
+  ["ta","news","earnings","dividend"].forEach(p => document.getElementById(`ts-${p}`).textContent = ts);
+  renderSlip("ta", data.ta, renderTA);
+  renderSlip("news", data.news, renderNews);
+  renderSlip("earnings", data.earnings, renderEarnings);
+  renderSlip("dividend", data.dividend, renderDividend);
+}
+
+document.getElementById("refreshOne").addEventListener("click", async () => {
+  if (!currentTicker) return;
+  const btn = document.getElementById("refreshOne");
+  btn.disabled = true; btn.textContent = "Päivitetään…";
+  await fetch(`/api/refresh/${encodeURIComponent(currentTicker)}`, { method:"POST" });
+  await refreshDetailView();
+  await loadPortfolio();
+  btn.disabled = false; btn.textContent = "Päivitä tämä";
+});
+
+document.getElementById("refreshAll").addEventListener("click", async (e) => {
+  const btn = e.target;
+  btn.disabled = true; btn.textContent = "Päivitetään…";
+  await fetch("/api/refresh-all", { method:"POST" });
+  await loadPortfolio();
+  if (currentTicker) await refreshDetailView();
+  btn.disabled = false; btn.textContent = "Päivitä kaikki";
+});
+
+// Asetukset-modaali
+const overlay = document.getElementById("overlay");
+document.getElementById("openSettings").addEventListener("click", async () => {
+  const status = await fetch("/api/config/status").then(r => r.json());
+  setDot("anthropic", status.anthropic_api_key);
+  setDot("finnhub", status.finnhub_api_key);
+  overlay.classList.add("open");
+});
+
+function setDot(name, info) {
+  const dot = document.getElementById(`dot-${name}`);
+  const input = document.getElementById(`key-${name}`);
+  if (info.source === "env") {
+    dot.textContent = "🔒 ympäristömuuttuja";
+    dot.className = "dot set";
+    input.disabled = true;
+    input.placeholder = "Asetettu hosting-alustan ympäristömuuttujalla";
+  } else {
+    dot.textContent = info.set ? "● asetettu" : "○ ei asetettu";
+    dot.className = "dot " + (info.set ? "set" : "unset");
+    input.disabled = false;
+    input.placeholder = name === "anthropic" ? "sk-ant-…" : "finnhub-avain";
+  }
+}
+document.getElementById("closeSettings").addEventListener("click", () => overlay.classList.remove("open"));
+overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.classList.remove("open"); });
+
+document.getElementById("saveSettings").addEventListener("click", async () => {
+  const payload = {};
+  const a = document.getElementById("key-anthropic").value.trim();
+  const f = document.getElementById("key-finnhub").value.trim();
+  if (a) payload.anthropic_api_key = a;
+  if (f) payload.finnhub_api_key = f;
+  await fetch("/api/config", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+  document.getElementById("key-anthropic").value = "";
+  document.getElementById("key-finnhub").value = "";
+  overlay.classList.remove("open");
+});
+
+loadPortfolio();
+</script>
+</body>
+</html>
